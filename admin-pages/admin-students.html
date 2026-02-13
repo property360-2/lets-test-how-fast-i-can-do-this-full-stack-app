@@ -1,0 +1,365 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Students | Admin</title>
+    <link rel="stylesheet" href="../system-script/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .search-box {
+            position: relative;
+            max-width: 400px;
+            width: 100%;
+        }
+        .search-box i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+        .search-box input {
+            padding-left: 2.5rem;
+        }
+        .student-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .student-table th {
+            text-align: left;
+            padding: 1rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .student-table td {
+            padding: 1.25rem 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .student-table tr:hover {
+            background: var(--glass-bg);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            width: 90%;
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="admin-dashboard.html" class="logo"><i class="fas fa-arrow-left" style="font-size: 1rem;"></i> OJT<span>JOURNAL</span></a>
+        <div>
+            <button id="logout-btn" class="btn btn-outline" style="padding: 0.5rem 1rem;">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container animate-fade">
+        <div class="page-header">
+            <div>
+                <h1>Manage Students</h1>
+                <p style="color: var(--text-muted);">View, search, and add OJT students.</p>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <a href="admin-archives.html" class="btn btn-outline">
+                    <i class="fas fa-archive"></i> View Archives
+                </a>
+                <button id="add-student-btn" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i> Add Student
+                </button>
+            </div>
+        </div>
+
+        <div class="glass-card" style="margin-bottom: 2rem; padding: 1rem;">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="student-search" placeholder="Search by name, ID, or section...">
+            </div>
+        </div>
+
+        <div class="glass-card" style="padding: 0; overflow-x: auto;">
+            <table class="student-table">
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Student ID</th>
+                        <th>Section</th>
+                        <th>Company</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="student-list-body">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">Loading students...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div id="student-modal" class="modal">
+        <div class="glass-card modal-content">
+            <h2 id="modal-title" style="margin-bottom: 1.5rem;">Add New Student</h2>
+            <form id="add-student-form">
+                <input type="hidden" id="stu-uid">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="input-group">
+                        <label>First Name</label>
+                        <input type="text" id="stu-fname" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Last Name</label>
+                        <input type="text" id="stu-lname" required>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="input-group">
+                        <label>Email Address</label>
+                        <input type="email" id="stu-email" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Student ID</label>
+                        <input type="text" id="stu-id" required>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="input-group">
+                        <label>Section</label>
+                        <input type="text" id="stu-section" placeholder="e.g. BSIT-4A" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Company</label>
+                        <input type="text" id="stu-company" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Position</label>
+                    <input type="text" id="stu-position" required>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button type="button" id="close-modal" class="btn btn-outline" style="flex: 1;">Cancel</button>
+                    <button type="submit" id="submit-btn" class="btn btn-primary" style="flex: 1;">Save Student</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, serverTimestamp } from '../system-script/firebase-core.js';
+        import { logoutUser, guardPage } from '../system-script/auth.js';
+        import { getAllStudents, updateUserStatus } from '../system-script/admin-utils.js';
+        import { showToast, showConfirm } from '../system-script/ui-utils.js';
+        import { doc, setDoc, updateDoc, collection } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+        guardPage('admin');
+        document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+        const modal = document.getElementById('student-modal');
+        const addBtn = document.getElementById('add-student-btn');
+        const closeBtn = document.getElementById('close-modal');
+        const form = document.getElementById('add-student-form');
+        const searchInput = document.getElementById('student-search');
+        let allStudents = [];
+
+        addBtn.onclick = () => {
+            document.getElementById('modal-title').textContent = 'Add New Student';
+            document.getElementById('submit-btn').textContent = 'Save Student';
+            document.getElementById('stu-uid').value = '';
+            document.getElementById('stu-email').disabled = false;
+            form.reset();
+            modal.style.display = 'flex';
+        };
+        closeBtn.onclick = () => modal.style.display = 'none';
+        window.onclick = (e) => { if(e.target == modal) modal.style.display = 'none'; }
+
+        async function loadStudents() {
+            try {
+                allStudents = await getAllStudents();
+                renderStudents(allStudents);
+            } catch (error) {
+                console.error(error);
+                document.getElementById('student-list-body').innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--danger);">Failed to load students.</td></tr>';
+            }
+        }
+
+        function renderStudents(students) {
+            const body = document.getElementById('student-list-body');
+            if (students.length === 0) {
+                body.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">No students found.</td></tr>';
+                return;
+            }
+
+            body.innerHTML = students.map(s => `
+                <tr>
+                    <td>
+                        <div style="font-weight: 600;">${s.firstName} ${s.lastName}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">${s.email}</div>
+                    </td>
+                    <td style="font-family: monospace;">${s.studentId}</td>
+                    <td>${s.section}</td>
+                    <td>${s.company}</td>
+                    <td>
+                        <span class="badge ${s.isActive ? 'badge-success' : 'badge-danger'}">
+                            ${s.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td style="display: flex; gap: 0.5rem;">
+                        <button onclick="viewStudentLogs('${s.id}')" class="btn btn-outline" style="padding: 0.4rem 0.6rem; font-size: 0.7rem;" title="View Logs">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button onclick="editStudent('${s.id}')" class="btn btn-primary" style="padding: 0.4rem 0.6rem; font-size: 0.7rem;" title="Edit Student">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="archiveStudent('${s.id}')" class="btn btn-outline" style="padding: 0.4rem 0.6rem; font-size: 0.7rem; border-color: var(--danger); color: var(--danger);" title="Archive Student">
+                            <i class="fas fa-archive"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        window.viewStudentLogs = (uid) => {
+            sessionStorage.setItem('selectedStudentUid', uid);
+            window.location.href = 'admin-student.html';
+        };
+
+        window.editStudent = (uid) => {
+            const s = allStudents.find(student => student.id === uid);
+            if (!s) return;
+
+            document.getElementById('modal-title').textContent = 'Edit Student Info';
+            document.getElementById('submit-btn').textContent = 'Update Student';
+            document.getElementById('stu-uid').value = s.id;
+            document.getElementById('stu-email').value = s.email;
+            document.getElementById('stu-email').disabled = true; // Email usually stays the same
+            document.getElementById('stu-fname').value = s.firstName;
+            document.getElementById('stu-lname').value = s.lastName;
+            document.getElementById('stu-id').value = s.studentId;
+            document.getElementById('stu-section').value = s.section;
+            document.getElementById('stu-company').value = s.company;
+            document.getElementById('stu-position').value = s.position;
+
+            modal.style.display = 'flex';
+        };
+
+        window.archiveStudent = async (uid) => {
+            const confirmed = await showConfirm('Archive Student', 'Are you sure you want to archive this student? They will be moved to the archives.', 'warning');
+            if (!confirmed) return;
+            try {
+                await updateUserStatus(uid, false);
+                showToast('Student archived successfully!', 'success');
+                loadStudents();
+            } catch (error) {
+                showToast('Error archiving student.', 'error');
+            }
+        };
+
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = allStudents.filter(s => 
+                `${s.firstName} ${s.lastName}`.toLowerCase().includes(term) ||
+                s.studentId.toLowerCase().includes(term) ||
+                s.section.toLowerCase().includes(term) ||
+                s.company.toLowerCase().includes(term)
+            );
+            renderStudents(filtered);
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const uid = document.getElementById('stu-uid').value;
+            const email = document.getElementById('stu-email').value;
+            const firstName = document.getElementById('stu-fname').value;
+            const lastName = document.getElementById('stu-lname').value;
+            const studentId = document.getElementById('stu-id').value;
+            const section = document.getElementById('stu-section').value;
+            const company = document.getElementById('stu-company').value;
+            const position = document.getElementById('stu-position').value;
+
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+
+            try {
+                if (uid) {
+                    // EDIT MODE
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+                    await updateDoc(doc(db, "users", uid), {
+                        firstName, lastName, studentId, section, company, position
+                    });
+                    showToast('Student info updated successfully!', 'success');
+                } else {
+                    // ADD MODE
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Account...';
+                    
+                    const tempPassword = "Pass" + studentId;
+                    const firebaseConfig = {
+                        apiKey: "AIzaSyCGf06TBKi-wnSoyN1UZijmphts4k8PSzg",
+                        authDomain: "ojt-journal-static.firebaseapp.com",
+                        projectId: "ojt-journal-static",
+                    };
+
+                    const { initializeApp: initSecondary } = await import("https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js");
+                    const { getAuth: getAuthSecondary, createUserWithEmailAndPassword, signOut: signOutSecondary } = await import("https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js");
+
+                    const secondaryApp = initSecondary(firebaseConfig, "Secondary");
+                    const secondaryAuth = getAuthSecondary(secondaryApp);
+
+                    const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, tempPassword);
+                    const newUser = userCredential.user;
+                    const newUid = newUser.uid;
+
+                    const studentData = {
+                        firstName, lastName, email, studentId, section, company, position,
+                        role: 'student', isActive: true, createdAt: serverTimestamp()
+                    };
+
+                    await setDoc(doc(db, "users", newUid), studentData);
+                    await signOutSecondary(secondaryAuth);
+                    
+                    showToast('Student Account Created Successfully!', 'success');
+                    
+                    // Specific complex feedback for new account
+                    await showConfirm('Credentials Generated', 
+                        `Email: ${email}\nTemp Password: ${tempPassword}\n\nPlease copy these credentials for the student.`, 
+                        'info'
+                    );
+                }
+                
+                modal.style.display = 'none';
+                form.reset();
+                loadStudents();
+            } catch (error) {
+                console.error(error);
+                alert('Error: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Save Student';
+            }
+        });
+
+        loadStudents();
+    </script>
+</body>
+</html>

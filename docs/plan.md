@@ -24,7 +24,6 @@ To develop a **web-based daily journal system** for OJT students where:
 
 ## 👥 User Roles & Responsibilities
 
-### 👨‍🎓 Student
 
 * Login to the system
 * View personal profile (read-only)

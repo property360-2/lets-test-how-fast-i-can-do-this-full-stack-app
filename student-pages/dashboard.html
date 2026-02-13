@@ -1,0 +1,176 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Student</title>
+    <link rel="stylesheet" href="../system-script/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        .journal-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .journal-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            transition: transform 0.2s;
+        }
+        .journal-item:hover {
+            transform: scale(1.01);
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="#" class="logo">OJT<span>JOURNAL</span></a>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <span id="user-name" style="color: var(--text-muted); font-size: 0.9rem;">Loading...</span>
+            <button id="logout-btn" class="btn btn-outline" style="padding: 0.5rem 1rem;">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+    </nav>
+
+    <div class="container animate-fade">
+        <header style="margin-bottom: 2rem;">
+            <h1>Student Dashboard</h1>
+            <p style="color: var(--text-muted);">Track your daily OJT progress and compliance.</p>
+        </header>
+
+        <div class="stats-grid">
+            <div class="glass-card stat-card">
+                <div class="stat-icon" style="background: rgba(99, 102, 241, 0.2); color: var(--primary);">
+                    <i class="fas fa-book"></i>
+                </div>
+                <div>
+                    <label>Total Journals</label>
+                    <h3 id="stat-total">0</h3>
+                </div>
+            </div>
+            <div class="glass-card stat-card">
+                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.2); color: var(--success);">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div>
+                    <label>Reviewed</label>
+                    <h3 id="stat-reviewed">0</h3>
+                </div>
+            </div>
+            <div class="glass-card stat-card">
+                <div class="stat-icon" style="background: rgba(245, 158, 11, 0.2); color: var(--warning);">
+                    <i class="fas fa-calendar-week"></i>
+                </div>
+                <div>
+                    <label>Current Week</label>
+                    <h3 id="stat-week">Week 0</h3>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2>Recent Journals</h2>
+            <a href="journal.html" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Entry
+            </a>
+        </div>
+
+        <div class="glass-card">
+            <div id="journal-container" class="journal-list">
+                <p style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading journals...</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth, db } from '../system-script/firebase-core.js';
+        import { logoutUser, guardPage } from '../system-script/auth.js';
+        import { getStudentJournals, calculateWeekNumber } from '../system-script/journal-utils.js';
+        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+        // Protect page
+        guardPage('student');
+
+        document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) return;
+
+            // Fetch user info
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                document.getElementById('user-name').textContent = `${userData.firstName} ${userData.lastName}`;
+            }
+
+            // Fetch journals
+            try {
+                const journals = await getStudentJournals(user.uid);
+                renderJournals(journals);
+                updateStats(journals);
+            } catch (error) {
+                console.error(error);
+                document.getElementById('journal-container').innerHTML = '<p style="color: var(--danger);">Failed to load journals.</p>';
+            }
+        });
+
+        function renderJournals(journals) {
+            const container = document.getElementById('journal-container');
+            if (journals.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 2rem;">No journal entries yet.</p>';
+                return;
+            }
+
+            container.innerHTML = journals.map(j => `
+                <div class="journal-item glass-card" style="padding: 1rem 1.5rem; margin-bottom: 0.5rem; background: var(--background);">
+                    <div>
+                        <div style="font-weight: 600; font-size: 1.1rem;">${new Date(j.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">Week ${j.week}</div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <span class="badge ${j.reviewed ? 'badge-success' : 'badge-warning'}">
+                            ${j.reviewed ? 'Reviewed' : 'Pending'}
+                        </span>
+                        <a href="journal.html?date=${j.date}" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateStats(journals) {
+            document.getElementById('stat-total').textContent = journals.length;
+            document.getElementById('stat-reviewed').textContent = journals.filter(j => j.reviewed).length;
+            
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('stat-week').textContent = `Week ${calculateWeekNumber(today)}`;
+        }
+    </script>
+</body>
+</html>

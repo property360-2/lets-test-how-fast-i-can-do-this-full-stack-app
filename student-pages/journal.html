@@ -1,0 +1,198 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journal Editor | Student</title>
+    <link rel="stylesheet" href="../system-script/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .editor-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .status-banner {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+            display: none;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .remarks-container {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 4px solid var(--primary);
+            border-radius: 0 0.5rem 0.5rem 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="dashboard.html" class="logo"><i class="fas fa-arrow-left" style="font-size: 1rem;"></i> OJT<span>JOURNAL</span></a>
+        <div>
+            <button id="logout-btn" class="btn btn-outline" style="padding: 0.5rem 1rem;">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container animate-fade">
+        <div class="editor-container">
+            <header style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                    <h1>Journal Entry</h1>
+                    <p id="week-display" style="color: var(--text-muted);">Week 0</p>
+                </div>
+                <div style="text-align: right;">
+                    <label>Log Date</label>
+                    <input type="date" id="journal-date" style="width: auto;" required>
+                </div>
+            </header>
+
+            <div id="status-banner" class="status-banner"></div>
+
+            <div class="glass-card">
+                <form id="journal-form">
+                    <div class="input-group">
+                        <label for="content">What did you work on today?</label>
+                        <textarea id="content" rows="12" placeholder="Write your daily activities here..." required></textarea>
+                    </div>
+
+                    <div id="remarks-container" class="remarks-container">
+                        <h4 style="margin-bottom: 0.5rem; color: var(--primary);">Admin Remarks:</h4>
+                        <p id="remarks-text" style="font-style: italic;"></p>
+                    </div>
+
+                    <div id="action-buttons" style="display: flex; gap: 1rem; margin-top: 2rem;">
+                        <button type="button" id="save-draft" class="btn btn-outline" style="flex: 1;">
+                            <i class="far fa-save"></i> Save as Draft
+                        </button>
+                        <button type="submit" id="submit-journal" class="btn btn-primary" style="flex: 1;">
+                            <i class="fas fa-paper-plane"></i> Submit Journal
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth } from '../system-script/firebase-core.js';
+        import { logoutUser, guardPage } from '../system-script/auth.js';
+        import { saveJournal, getJournal, calculateWeekNumber } from '../system-script/journal-utils.js';
+        import { showToast, showConfirm } from '../system-script/ui-utils.js';
+
+        guardPage('student');
+        document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+        const dateInput = document.getElementById('journal-date');
+        const contentInput = document.getElementById('content');
+        const weekDisplay = document.getElementById('week-display');
+        const statusBanner = document.getElementById('status-banner');
+        const remarksContainer = document.getElementById('remarks-container');
+        const remarksText = document.getElementById('remarks-text');
+        const actionButtons = document.getElementById('action-buttons');
+        const journalForm = document.getElementById('journal-form');
+
+        // Set default date to today
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryDate = urlParams.get('date');
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = queryDate || today;
+        dateInput.max = today; // Can't log future dates
+
+        async function loadJournalData() {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            const date = dateInput.value;
+            weekDisplay.textContent = `Week ${calculateWeekNumber(date)}`;
+            
+            // Reset UI
+            statusBanner.style.display = 'none';
+            remarksContainer.style.display = 'none';
+            contentInput.disabled = false;
+            actionButtons.style.display = 'flex';
+            contentInput.value = '';
+
+            try {
+                const journal = await getJournal(user.uid, date);
+                if (journal) {
+                    contentInput.value = journal.content;
+                    
+                    if (journal.reviewed) {
+                        showStatus('Journal has been reviewed and is now locked.', 'badge-success');
+                        contentInput.disabled = true;
+                        actionButtons.style.display = 'none';
+                        if (journal.remarks) {
+                            remarksContainer.style.display = 'block';
+                            remarksText.textContent = journal.remarks;
+                        }
+                    } else if (journal.submitted) {
+                        showStatus('Journal submitted. Waiting for review.', 'badge-warning');
+                    }
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        function showStatus(message, type) {
+            statusBanner.textContent = message;
+            statusBanner.className = `status-banner ${type}`;
+            statusBanner.style.display = 'flex';
+            statusBanner.style.background = type === 'badge-success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)';
+            statusBanner.style.color = type === 'badge-success' ? 'var(--success)' : 'var(--warning)';
+        }
+
+        dateInput.addEventListener('change', loadJournalData);
+        auth.onAuthStateChanged(loadJournalData);
+
+        async function handleSave(isSubmit) {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            const date = dateInput.value;
+            const content = contentInput.value.trim();
+
+            if (!content) {
+                showToast('Please enter some content.', 'error');
+                return;
+            }
+
+            if (isSubmit) {
+                const confirmed = await showConfirm('Submit Journal', 'Are you sure you want to submit? You cannot edit once reviewed.', 'info');
+                if (!confirmed) return;
+            }
+
+            try {
+                const btn = isSubmit ? document.getElementById('submit-journal') : document.getElementById('save-draft');
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+                await saveJournal(user.uid, date, content, isSubmit);
+                
+                showToast(isSubmit ? 'Journal submitted successfully!' : 'Draft saved successfully!', 'success');
+                setTimeout(() => window.location.href = 'dashboard.html', 1500);
+            } catch (error) {
+                showToast(error.message, 'error');
+                // Re-enable buttons on error
+                const btn = isSubmit ? document.getElementById('submit-journal') : document.getElementById('save-draft');
+                btn.disabled = false;
+                btn.innerHTML = isSubmit ? 'Submit Journal' : 'Save Draft';
+            } finally {
+                // Done
+            }
+        }
+
+        document.getElementById('save-draft').addEventListener('click', () => handleSave(false));
+        journalForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            handleSave(true);
+        });
+    </script>
+</body>
+</html>
