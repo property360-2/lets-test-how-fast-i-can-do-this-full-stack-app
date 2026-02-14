@@ -53,6 +53,7 @@
         <a href="dashboard.html" class="logo">
             <img src="../assets/richwell-colleges-logo.webp" alt="Logo" style="height: 40px;">
         </a>
+        <button id="menu-toggle" class="menu-toggle"><i class="fas fa-bars"></i></button>
         <div class="nav-links">
             <a href="dashboard.html" class="nav-link"><i class="fas fa-home"></i> Home</a>
             <a href="journals.html" class="nav-link"><i class="fas fa-book"></i> Journals</a>
@@ -104,11 +105,18 @@
     </div>
 
     <script type="module">
+        /**
+         * Student Profile Module
+         * Displays the primary information of the authenticated student,
+         * including their OJT company, position, and account status.
+         */
         import { auth, db } from '../system-script/firebase-core.js';
         import { logoutUser, guardPage } from '../system-script/auth.js';
+        import { setupHamburgerMenu } from '../system-script/ui-utils.js';
         import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
         guardPage('student');
+        setupHamburgerMenu();
         document.getElementById('logout-btn').addEventListener('click', logoutUser);
 
         auth.onAuthStateChanged(async (user) => {

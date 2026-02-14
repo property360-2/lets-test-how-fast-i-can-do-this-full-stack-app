@@ -11,7 +11,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
 /**
- * Fetch all students
+ * Retrieves a list of all student accounts.
+ * @param {boolean} isActive - Filter by active or archived status.
+ * @returns {Promise<Array>} - List of student user objects.
  */
 export async function getAllStudents(isActive = true) {
     try {
@@ -30,7 +32,10 @@ export async function getAllStudents(isActive = true) {
 }
 
 /**
- * Update user active status
+ * Updates a student's active/archived status.
+ * @param {string} userId - The unique ID of the student.
+ * @param {boolean} isActive - True for active, false for archived.
+ * @returns {Promise<boolean>}
  */
 export async function updateUserStatus(userId, isActive) {
     try {
@@ -44,7 +49,9 @@ export async function updateUserStatus(userId, isActive) {
 }
 
 /**
- * Fetch all journals for admin review, optionally filtered by status
+ * Fetches all submitted journals for administrative review.
+ * @param {string} status - Filter by 'pending', 'reviewed', or 'all'.
+ * @returns {Promise<Array>} - List of journal objects, ordered by timestamp.
  */
 export async function getAllJournals(status = 'all') {
     try {
@@ -65,7 +72,11 @@ export async function getAllJournals(status = 'all') {
 }
 
 /**
- * Review a journal entry
+ * Provides feedback and updates the review status of a journal entry.
+ * @param {string} journalId - The unique journal ID (usually userId_date).
+ * @param {string} remarks - Feedback from the admin.
+ * @param {boolean} reviewed - Whether the journal is marked as reviewed.
+ * @returns {Promise<boolean>}
  */
 export async function reviewJournal(journalId, remarks, reviewed = true) {
     try {
@@ -83,7 +94,8 @@ export async function reviewJournal(journalId, remarks, reviewed = true) {
 }
 
 /**
- * Get stats summary for admin dashboard
+ * Calculates a summary of platform activity for the admin dashboard.
+ * @returns {Promise<Object>} - Contains total students, total journals, and pending reviews.
  */
 export async function getAdminStats() {
     try {

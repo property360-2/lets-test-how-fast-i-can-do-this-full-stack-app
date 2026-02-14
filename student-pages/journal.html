@@ -35,6 +35,7 @@
         <a href="dashboard.html" class="logo">
             <img src="../assets/richwell-colleges-logo.webp" alt="Logo" style="height: 40px;">
         </a>
+        <button id="menu-toggle" class="menu-toggle"><i class="fas fa-bars"></i></button>
         <div class="nav-links">
             <a href="dashboard.html" class="nav-link"><i class="fas fa-home"></i> Home</a>
             <a href="journals.html" class="nav-link active"><i class="fas fa-book"></i> Journals</a>
@@ -108,12 +109,18 @@
     </div>
 
     <script type="module">
+        /**
+         * Student Journal Entry Module
+         * The primary interface for students to draft and submit their daily OJT logs.
+         * Handles content persistence, schedule validation, and submission finalization.
+         */
         import { auth } from '../system-script/firebase-core.js';
         import { logoutUser, guardPage } from '../system-script/auth.js';
         import { saveJournal, getJournal, calculateWeekNumber, checkWorkday } from '../system-script/journal-utils.js';
-        import { showToast, showConfirm } from '../system-script/ui-utils.js';
+        import { showToast, showConfirm, setupHamburgerMenu } from '../system-script/ui-utils.js';
 
         guardPage('student');
+        setupHamburgerMenu();
         document.getElementById('logout-btn').addEventListener('click', logoutUser);
 
         const dateInput = document.getElementById('journal-date');

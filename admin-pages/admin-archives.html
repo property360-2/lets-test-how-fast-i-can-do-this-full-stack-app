@@ -41,6 +41,7 @@
             <img src="../assets/richwell-colleges-logo.webp" alt="Logo" style="height: 40px;">
             <span style="font-size: 0.7rem; color: var(--secondary); margin-left: 0.5rem; background: rgba(236, 72, 153, 0.1); padding: 0.2rem 0.5rem; border-radius: 4px;">ADMIN</span>
         </a>
+        <button id="menu-toggle" class="menu-toggle"><i class="fas fa-bars"></i></button>
         <div class="nav-links">
             <a href="admin-dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
             <a href="admin-students.html" class="nav-link"><i class="fas fa-users"></i> Students</a>
@@ -80,11 +81,17 @@
     </div>
 
     <script type="module">
+        /**
+         * Admin Archives Module
+         * Manages historically inactive student accounts. Allows the retrieval
+         * and restoration of previously archived student records.
+         */
         import { logoutUser, guardPage } from '../system-script/auth.js';
         import { getAllStudents, updateUserStatus } from '../system-script/admin-utils.js';
-        import { showToast, showConfirm } from '../system-script/ui-utils.js';
+        import { showToast, showConfirm, setupHamburgerMenu } from '../system-script/ui-utils.js';
 
         guardPage('admin');
+        setupHamburgerMenu();
         document.getElementById('logout-btn').addEventListener('click', logoutUser);
 
         let allStudents = [];

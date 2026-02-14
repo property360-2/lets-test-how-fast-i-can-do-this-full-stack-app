@@ -74,6 +74,7 @@
         <a href="admin-dashboard.html" class="logo">
             <img src="../assets/richwell-colleges-logo.webp" alt="Logo" style="height: 40px;">
         </a>
+        <button id="menu-toggle" class="menu-toggle"><i class="fas fa-bars"></i></button>
         <div class="nav-links">
             <a href="admin-dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
             <a href="admin-students.html" class="nav-link active"><i class="fas fa-users"></i> Students</a>
@@ -102,14 +103,14 @@
         <div class="glass-card" style="margin-bottom: 2rem; padding: 0.75rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
             <div class="search-box" style="flex: 2; min-width: 250px; margin-bottom: 0;">
                 <i class="fas fa-search"></i>
-                <input type="text" id="student-search" placeholder="Search students...">
+                <input type="text" id="student-search" placeholder="Search students..." aria-label="Search students by name, ID or company">
             </div>
             
-            <select id="filter-section" class="btn btn-outline" style="flex: 1; min-width: 140px; padding: 0.6rem; font-size: 0.85rem; height: 42px;">
+            <select id="filter-section" class="btn btn-outline" style="flex: 1; min-width: 140px; padding: 0.6rem; font-size: 0.85rem; height: 42px;" aria-label="Filter by section">
                 <option value="all">All Sections</option>
             </select>
 
-            <select id="sort-by" class="btn btn-outline" style="flex: 1; min-width: 140px; padding: 0.6rem; font-size: 0.85rem; height: 42px;">
+            <select id="sort-by" class="btn btn-outline" style="flex: 1; min-width: 140px; padding: 0.6rem; font-size: 0.85rem; height: 42px;" aria-label="Sort students list">
                 <option value="name-asc">Sort: A-Z</option>
                 <option value="name-desc">Sort: Z-A</option>
                 <option value="id-asc">Sort: ID Asc</option>
@@ -121,10 +122,10 @@
             <table class="student-table">
                 <thead>
                     <tr>
-                        <th>Student Name</th>
-                        <th>Student ID</th>
+                        <th>Student Info</th>
+                        <th class="hide-mobile">Student ID</th>
                         <th>Section</th>
-                        <th>Company</th>
+                        <th class="hide-mobile">Company</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -146,43 +147,43 @@
                 <input type="hidden" id="stu-uid">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div class="input-group">
-                        <label>First Name</label>
+                        <label for="stu-fname">First Name</label>
                         <input type="text" id="stu-fname" required>
                     </div>
                     <div class="input-group">
-                        <label>Last Name</label>
+                        <label for="stu-lname">Last Name</label>
                         <input type="text" id="stu-lname" required>
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div class="input-group">
-                        <label>Email Address</label>
+                        <label for="stu-email">Email Address</label>
                         <input type="email" id="stu-email" required>
                         <span id="email-error" style="color: var(--danger); font-size: 0.7rem; display: none;">Email already exists!</span>
                     </div>
                     <div class="input-group">
-                        <label>Student ID</label>
+                        <label for="stu-id">Student ID</label>
                         <input type="text" id="stu-id" required>
                         <span id="id-error" style="color: var(--danger); font-size: 0.7rem; display: none;">ID already exists!</span>
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div class="input-group">
-                        <label>Section</label>
+                        <label for="stu-section">Section</label>
                         <input type="text" id="stu-section" placeholder="e.g. BSIT-4A" required>
                     </div>
                     <div class="input-group">
-                        <label>Company</label>
+                        <label for="stu-company">Company</label>
                         <input type="text" id="stu-company" required>
                     </div>
                 </div>
                 <div class="input-group">
-                    <label>Position</label>
+                    <label for="stu-position">Position</label>
                     <input type="text" id="stu-position" required>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
                     <div class="input-group">
-                        <label>OJT Start Date</label>
+                        <label for="stu-ojt-start">OJT Start Date</label>
                         <input type="date" id="stu-ojt-start" required>
                     </div>
                     <div class="input-group">
@@ -222,13 +223,19 @@
     </div>
 
     <script type="module">
-        import { db, serverTimestamp } from '../system-script/firebase-core.js';
+        /**
+         * Admin Student Management Module
+         * Handles student account creation, activity status toggling (Active/Archived),
+         * and provides a searchable/filterable list of currently enrolled students.
+         */
+        import { db, serverTimestamp, firebaseConfig } from '../system-script/firebase-core.js';
         import { logoutUser, guardPage } from '../system-script/auth.js';
         import { getAllStudents, updateUserStatus } from '../system-script/admin-utils.js';
-        import { showToast, showConfirm } from '../system-script/ui-utils.js';
+        import { showToast, showConfirm, setupHamburgerMenu, escapeHTML } from '../system-script/ui-utils.js';
         import { doc, setDoc, updateDoc, collection } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
         guardPage('admin');
+        setupHamburgerMenu();
         document.getElementById('logout-btn').addEventListener('click', logoutUser);
 
         const modal = document.getElementById('student-modal');
@@ -325,7 +332,11 @@
             renderStudents(filtered);
         }
 
-        searchInput.addEventListener('input', applyFilters);
+        let searchTimeout;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(applyFilters, 300);
+        });
         document.getElementById('filter-section').addEventListener('change', applyFilters);
         document.getElementById('sort-by').addEventListener('change', applyFilters);
 
@@ -336,15 +347,25 @@
                 return;
             }
 
-            body.innerHTML = students.map(s => `
+            body.innerHTML = students.map(s => {
+                const safeName = `${escapeHTML(s.firstName)} ${escapeHTML(s.lastName)}`;
+                const safeEmail = escapeHTML(s.email);
+                const safeId = escapeHTML(s.studentId);
+                const safeSection = escapeHTML(s.section);
+                const safeCompany = escapeHTML(s.company);
+
+                return `
                 <tr>
                     <td>
-                        <div style="font-weight: 600;">${s.firstName} ${s.lastName}</div>
-                        <div style="font-size: 0.75rem; color: var(--text-muted);">${s.email}</div>
+                        <div style="font-weight: 600;">${safeName}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); display: flex; flex-direction: column;">
+                            <span>${safeEmail}</span>
+                            <span class="show-mobile-only" style="display: none; font-family: monospace; margin-top: 2px;">ID: ${safeId}</span>
+                        </div>
                     </td>
-                    <td style="font-family: monospace;">${s.studentId}</td>
-                    <td>${s.section}</td>
-                    <td>${s.company}</td>
+                    <td class="hide-mobile" style="font-family: monospace;">${safeId}</td>
+                    <td>${safeSection}</td>
+                    <td class="hide-mobile">${safeCompany}</td>
                     <td>
                         <span class="badge ${s.isActive ? 'badge-success' : 'badge-danger'}">
                             ${s.isActive ? 'Active' : 'Inactive'}
@@ -362,7 +383,7 @@
                         </button>
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         window.viewStudentLogs = (uid) => {
@@ -458,12 +479,6 @@
                     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Account...';
                     
                     const tempPassword = "Pass" + studentId;
-                    const firebaseConfig = {
-                        apiKey: "AIzaSyCGf06TBKi-wnSoyN1UZijmphts4k8PSzg",
-                        authDomain: "ojt-journal-static.firebaseapp.com",
-                        projectId: "ojt-journal-static",
-                    };
-
                     const { initializeApp: initSecondary } = await import("https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js");
                     const { getAuth: getAuthSecondary, createUserWithEmailAndPassword, signOut: signOutSecondary } = await import("https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js");
 

@@ -3,7 +3,10 @@
  * UI Utilities for custom Toast notifications and confirmation modals.
  */
 
-// Initialize Containers
+/**
+ * Initializes required UI containers for toasts and modals if they don't exist.
+ * This is called internally by showToast and showConfirm.
+ */
 function initUI() {
     if (!document.getElementById('toast-container')) {
         const container = document.createElement('div');
@@ -30,9 +33,9 @@ function initUI() {
 }
 
 /**
- * Show a toast notification
- * @param {string} message 
- * @param {string} type - 'success', 'error', 'info'
+ * Displays a non-intrusive toast notification.
+ * @param {string} message - The text to display.
+ * @param {string} type - Notification style ('success', 'error', 'info').
  */
 export function showToast(message, type = 'info') {
     initUI();
@@ -57,11 +60,11 @@ export function showToast(message, type = 'info') {
 }
 
 /**
- * Show a custom confirmation modal
- * @param {string} title 
- * @param {string} message 
- * @param {string} type - 'warning', 'danger', 'info'
- * @returns {Promise<boolean>}
+ * Displays a blocking confirmation modal and returns the user's choice.
+ * @param {string} title - Modal heading.
+ * @param {string} message - Description of the action requiring confirmation.
+ * @param {string} type - Visual indicator ('warning', 'danger', 'info').
+ * @returns {Promise<boolean>} - True if confirmed, false otherwise.
  */
 export function showConfirm(title, message, type = 'info') {
     initUI();
@@ -108,4 +111,37 @@ export function showConfirm(title, message, type = 'info') {
             }
         };
     });
+}
+/**
+ * Simple HTML Escaping for XSS prevention
+ * @param {string} str 
+ * @returns {string}
+ */
+export function escapeHTML(str) {
+    if (!str) return "";
+    const p = document.createElement("p");
+    p.textContent = str;
+    return p.innerHTML;
+}
+
+/**
+ * Centrally manages the hamburger menu toggle functionality.
+ * Expects #menu-toggle button and .nav-links container in the DOM.
+ */
+export function setupHamburgerMenu() {
+    const toggleBtn = document.getElementById('menu-toggle');
+    const navLinks = document.querySelector('.nav-links');
+
+    if (toggleBtn && navLinks) {
+        toggleBtn.onclick = () => {
+            navLinks.classList.toggle('active');
+        };
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!toggleBtn.contains(e.target) && !navLinks.contains(e.target)) {
+                navLinks.classList.remove('active');
+            }
+        });
+    }
 }

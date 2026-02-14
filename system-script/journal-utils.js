@@ -13,7 +13,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
 /**
- * Calculate OJT Week Number relative to student's start date
+ * Calculates the OJT week number based on the student's OJT start date.
+ * @param {string} dateStr - The current journal date (YYYY-MM-DD).
+ * @param {string} ojtStartDate - The student's official OJT start date.
+ * @returns {number} - The week number (starting from 1).
  */
 export function calculateWeekNumber(dateStr, ojtStartDate) {
     if (!ojtStartDate) return 1;
@@ -30,7 +33,11 @@ export function calculateWeekNumber(dateStr, ojtStartDate) {
 }
 
 /**
- * Check if a date is a workday for a specific student
+ * Determines if a specific date is a scheduled workday for a student.
+ * Checks global 'workdays' overrides first, then falls back to student's work schedule.
+ * @param {string} dateStr - The date to check (YYYY-MM-DD).
+ * @param {string} userId - The student's unique ID.
+ * @returns {Promise<boolean>} - True if it's a workday, false otherwise.
  */
 export async function checkWorkday(dateStr, userId) {
     try {
@@ -57,7 +64,10 @@ export async function checkWorkday(dateStr, userId) {
 }
 
 /**
- * Get student submission progress vs their specific schedule
+ * Analyzes a student's submission progress.
+ * Compares submitted journals against their expected work schedule.
+ * @param {string} userId - The student's ID.
+ * @returns {Promise<Object>} - Summary of submitted and missing journal dates.
  */
 export async function getStudentProgress(userId) {
     try {
@@ -85,8 +95,6 @@ export async function getStudentProgress(userId) {
 
                 // If it's a scheduled workday AND no journal exists
                 if (schedule.includes(dayOfWeek) && !submittedDates.has(dateStr)) {
-                    // Also check for global holiday overrides if you want to be super detailed
-                    // But for now, just schedule check
                     missingDates.push(dateStr);
                 }
 
@@ -108,7 +116,13 @@ export async function getStudentProgress(userId) {
 }
 
 /**
- * Create or Update a journal entry
+ * Saves a journal entry (Draft or Submission).
+ * Validates against OJT schedule and review status.
+ * @param {string} userId - The student's ID.
+ * @param {string} date - The journal date.
+ * @param {string} content - Activity logs.
+ * @param {boolean} submitted - Whether to finalize the submission.
+ * @returns {Promise<Object>} - The saved journal data.
  */
 export async function saveJournal(userId, date, content, submitted = false) {
     const isWorkday = await checkWorkday(date, userId);
@@ -153,7 +167,9 @@ export async function saveJournal(userId, date, content, submitted = false) {
 }
 
 /**
- * Fetch all journals for a specific student
+ * Retrieves all journal entries for a specific student.
+ * @param {string} userId - The student's ID.
+ * @returns {Promise<Array>} - List of journal objects, ordered by date.
  */
 export async function getStudentJournals(userId) {
     try {
@@ -171,7 +187,10 @@ export async function getStudentJournals(userId) {
 }
 
 /**
- * Fetch a specific journal entry
+ * Fetches a single journal entry by user and date.
+ * @param {string} userId - The student's ID.
+ * @param {string} date - The date (YYYY-MM-DD).
+ * @returns {Promise<Object|null>}
  */
 export async function getJournal(userId, date) {
     const journalId = `${userId}_${date}`;

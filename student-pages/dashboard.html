@@ -66,6 +66,7 @@
         <a href="dashboard.html" class="logo">
             <img src="../assets/richwell-colleges-logo.webp" alt="Logo" style="height: 40px;">
         </a>
+        <button id="menu-toggle" class="menu-toggle"><i class="fas fa-bars"></i></button>
         <div class="nav-links">
             <a href="dashboard.html" class="nav-link active"><i class="fas fa-home"></i> Home</a>
             <a href="journals.html" class="nav-link"><i class="fas fa-book"></i> Journals</a>
@@ -133,17 +134,36 @@
                 <p id="quote-author" style="font-size: 0.9rem; color: var(--text-muted); font-weight: 600;"></p>
             </div>
         </div>
-    </div>
+
+        <div class="glass-card animate-fade" style="animation-delay: 0.5s; margin-top: 2rem; padding: 0; background: transparent; border: none; box-shadow: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding: 0 1rem;">
+                <h2 style="margin: 0;">Recent Activity</h2>
+                <a href="journals.html" style="font-size: 0.9rem; color: var(--primary); font-weight: 600; text-decoration: none;">View All</a>
+            </div>
+            <div id="journal-container" class="journal-list">
+                <div class="skeleton-entry" style="padding: 1rem 1.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; background: var(--glass-bg); border-radius: 1rem;">
+                    <div class="skeleton" style="height: 25px; width: 30%;"></div>
+                    <div class="skeleton" style="height: 25px; width: 15%;"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="module">
+        /**
+         * Student Dashboard Module
+         * Provides students with a high-level overview of their OJT progress,
+         * including submission counts, missing entries, and quick links to daily logs.
+         */
         import { auth, db } from '../system-script/firebase-core.js';
         import { logoutUser, guardPage } from '../system-script/auth.js';
         import { getStudentProgress, calculateWeekNumber } from '../system-script/journal-utils.js';
+        import { setupHamburgerMenu } from '../system-script/ui-utils.js';
         import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
         // Protect page
         guardPage('student');
+        setupHamburgerMenu();
 
         document.getElementById('logout-btn').addEventListener('click', logoutUser);
 

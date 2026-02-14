@@ -346,3 +346,145 @@ select:focus {
     text-align: center;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
+
+/* Responsive Adjustments for Small Devices */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+
+    .glass-card {
+        padding: 1rem;
+    }
+
+    .nav {
+        padding: 0.6rem 1rem;
+    }
+
+    .nav-links {
+        gap: 0.75rem;
+    }
+
+    .nav-link {
+        font-size: 0.8rem;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    h2 {
+        font-size: 1.25rem;
+    }
+
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .nav {
+        padding: 0.6rem 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .logo {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        margin-left: 0;
+    }
+
+    .hide-mobile {
+        display: none !important;
+    }
+
+    .show-mobile-only {
+        display: block !important;
+    }
+
+    .menu-toggle {
+        display: block;
+        font-size: 1.25rem;
+        background: none;
+        border: none;
+        color: var(--text);
+        cursor: pointer;
+        padding: 0.5rem;
+        z-index: 101;
+        order: -1;
+        width: 40px;
+    }
+
+    .nav>div:last-child {
+        width: 40px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .nav-links {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background: var(--card);
+        flex-direction: column;
+        padding: 1rem;
+        border-bottom: 1px solid var(--border);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        gap: 1rem;
+    }
+
+    .nav-links.active {
+        display: flex;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        font-size: 14px;
+    }
+
+    .student-table th,
+    .student-table td {
+        padding: 0.5rem 0.4rem;
+        font-size: 0.75rem;
+    }
+
+    .badge {
+        padding: 0.1rem 0.4rem;
+        font-size: 0.65rem;
+    }
+
+    .btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.7rem;
+    }
+
+    .search-box {
+        max-width: none;
+    }
+
+    .student-table td:last-child {
+        display: flex;
+        gap: 0.25rem;
+        flex-wrap: wrap;
+    }
+
+    .student-table .btn {
+        padding: 0.3rem 0.5rem;
+        min-width: auto;
+    }
+}
+
+@media (min-width: 641px) {
+    .menu-toggle {
+        display: none;
+    }
+}

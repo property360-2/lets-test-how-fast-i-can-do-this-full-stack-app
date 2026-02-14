@@ -29,6 +29,7 @@
             <img src="../assets/richwell-colleges-logo.webp" alt="Logo" style="height: 40px;">
             <span style="font-size: 0.7rem; color: var(--secondary); margin-left: 0.5rem; background: rgba(236, 72, 153, 0.1); padding: 0.2rem 0.5rem; border-radius: 4px;">ADMIN</span>
         </a>
+        <button id="menu-toggle" class="menu-toggle"><i class="fas fa-bars"></i></button>
         <div class="nav-links">
             <a href="admin-dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
             <a href="admin-students.html" class="nav-link active"><i class="fas fa-users"></i> Students</a>
@@ -40,8 +41,8 @@
 
     <div class="container animate-fade">
         <div class="review-container">
-            <a id="back-link" href="#" class="btn btn-outline" style="margin-bottom: 2rem; display: inline-flex; align-items: center; gap: 0.5rem;">
-                <i class="fas fa-arrow-left"></i> Back to Timeline
+            <a id="back-link" href="#" class="btn btn-outline" style="margin-bottom: 2rem; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease;">
+                <i class="fas fa-arrow-left"></i> Back to Calendar
             </a>
 
             <div class="glass-card">
@@ -75,13 +76,19 @@
     </div>
 
     <script type="module">
+        /**
+         * Admin Journal Review Module
+         * Facilitates the evaluation of individual student journal entries.
+         * Allows admins to provide feedback (remarks) and approve/reject submissions.
+         */
         import { db } from '../system-script/firebase-core.js';
         import { logoutUser, guardPage } from '../system-script/auth.js';
         import { getJournal } from '../system-script/journal-utils.js';
         import { reviewJournal } from '../system-script/admin-utils.js';
-        import { showToast } from '../system-script/ui-utils.js';
+        import { showToast, escapeHTML, setupHamburgerMenu } from '../system-script/ui-utils.js';
 
         guardPage('admin');
+        setupHamburgerMenu();
         document.getElementById('logout-btn').addEventListener('click', logoutUser);
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -89,8 +96,9 @@
         const journalId = urlParams.get('id');
         const journalDate = urlParams.get('date');
 
-        if (!studentUid || !journalId) {
-            window.location.href = 'admin-students.html';
+        if (!studentUid || !journalId || !journalDate) {
+            showToast('Missing required parameters.', 'error');
+            setTimeout(() => window.location.href = 'admin-students.html', 1500);
         }
 
         // Set back link

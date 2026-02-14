@@ -102,6 +102,7 @@
             <img src="../assets/richwell-colleges-logo.webp" alt="Logo" style="height: 40px;">
             <span style="font-size: 0.7rem; color: var(--secondary); margin-left: 0.5rem; background: rgba(236, 72, 153, 0.1); padding: 0.2rem 0.5rem; border-radius: 4px;">ADMIN</span>
         </a>
+        <button id="menu-toggle" class="menu-toggle"><i class="fas fa-bars"></i></button>
         <div class="nav-links">
             <a href="admin-dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
             <a href="admin-students.html" class="nav-link"><i class="fas fa-users"></i> Students</a>
@@ -127,8 +128,8 @@
             <div class="calendar-header">
                 <h2 id="calendar-month-year">Month Year</h2>
                 <div style="display: flex; gap: 0.5rem;">
-                    <button id="prev-month" class="btn btn-outline" style="padding: 0.5rem 1rem;"><i class="fas fa-chevron-left"></i></button>
-                    <button id="next-month" class="btn btn-outline" style="padding: 0.5rem 1rem;"><i class="fas fa-chevron-right"></i></button>
+                    <button id="prev-month" class="btn btn-outline" style="padding: 0.5rem 1rem;" aria-label="Previous Month"><i class="fas fa-chevron-left"></i></button>
+                    <button id="next-month" class="btn btn-outline" style="padding: 0.5rem 1rem;" aria-label="Next Month"><i class="fas fa-chevron-right"></i></button>
                 </div>
             </div>
             <div class="calendar-grid">
@@ -159,14 +160,20 @@
     </div>
 
     <script type="module">
+        /**
+         * Admin Student Detail & History Module
+         * Provides an in-depth view of a specific student's OJT journey,
+         * listing all submitted journals and highlighting missing entries.
+         */
         import { db } from '../system-script/firebase-core.js';
         import { logoutUser, guardPage } from '../system-script/auth.js';
         import { getStudentProgress } from '../system-script/journal-utils.js';
         import { reviewJournal } from '../system-script/admin-utils.js';
-        import { showToast } from '../system-script/ui-utils.js';
+        import { showToast, escapeHTML, setupHamburgerMenu } from '../system-script/ui-utils.js';
         import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
         guardPage('admin');
+        setupHamburgerMenu();
         document.getElementById('logout-btn').addEventListener('click', logoutUser);
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -183,8 +190,8 @@
                 const progress = await getStudentProgress(studentUid);
                 const userData = progress.userData;
                 
-                document.getElementById('stu-name').textContent = `${userData.firstName} ${userData.lastName}`;
-                document.getElementById('stu-detail').textContent = `${userData.studentId} • ${userData.section} • ${userData.company}`;
+                document.getElementById('stu-name').textContent = `${escapeHTML(userData.firstName)} ${escapeHTML(userData.lastName)}`;
+                document.getElementById('stu-detail').textContent = `${escapeHTML(userData.studentId)} • ${escapeHTML(userData.section)} • ${escapeHTML(userData.company)}`;
 
                 journals = progress.journals;
                 missingDates = progress.missingDates;
@@ -209,6 +216,10 @@
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             const prevMonthDays = new Date(year, month, 0).getDate();
+
+            // Performance Fix: Create a map for O(1) lookups
+            const journalMap = new Map(journals.map(j => [j.date, j]));
+            const missingSet = new Set(missingDates);
             
             let html = '';
             
@@ -221,8 +232,8 @@
             const today = new Date().toISOString().split('T')[0];
             for (let day = 1; day <= daysInMonth; day++) {
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const journal = journals.find(j => j.date === dateStr);
-                const isMissing = missingDates.includes(dateStr);
+                const journal = journalMap.get(dateStr);
+                const isMissing = missingSet.has(dateStr);
                 
                 let classes = 'calendar-day';
                 if (dateStr === today) classes += ' today';
