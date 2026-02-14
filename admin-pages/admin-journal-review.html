@@ -106,9 +106,21 @@
 
         async function init() {
             try {
-                const journal = await getJournal(studentUid, journalDate);
+                // Try fetching by user and date first
+                let journal = await getJournal(studentUid, journalDate);
+                
+                // Fallback: Try fetching by specific ID if user/date lookup fails
+                if (!journal && journalId) {
+                    const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js");
+                    const docSnap = await getDoc(doc(db, "journals", journalId));
+                    if (docSnap.exists()) {
+                        journal = { id: docSnap.id, ...docSnap.data() };
+                    }
+                }
+
                 if (!journal) throw new Error('Journal not found');
 
+                // Update UI with journal data
                 document.getElementById('review-date').textContent = new Date(journal.date).toLocaleDateString(undefined, { dateStyle: 'full' });
                 document.getElementById('review-week').textContent = `Week ${journal.week}`;
                 document.getElementById('journal-content').textContent = journal.content;
@@ -124,7 +136,7 @@
                 }
             } catch (error) {
                 console.error(error);
-                showToast('Error loading journal.', 'error');
+                showToast('Error loading journal: ' + error.message, 'error');
             }
         }
 
@@ -135,6 +147,7 @@
                 reviewBtn.disabled = true;
                 reviewBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
+                // Use the explicit journalId from URL since it's the most reliable for updates
                 await reviewJournal(journalId, remarks, true);
                 showToast('Journal reviewed successfully!', 'success');
                 
