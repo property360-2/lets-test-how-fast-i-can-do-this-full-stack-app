@@ -488,3 +488,30 @@ select:focus {
         display: none;
     }
 }
+
+/* Minimal Footer */
+.minimal-footer {
+    padding: 2.5rem 0;
+    text-align: center;
+    border-top: 1px solid var(--border);
+    margin-top: 4rem;
+}
+
+.minimal-footer p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.minimal-footer a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.minimal-footer a:hover {
+    text-decoration: underline;
+}
