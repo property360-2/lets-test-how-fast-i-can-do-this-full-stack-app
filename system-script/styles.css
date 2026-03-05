@@ -152,6 +152,10 @@ select:focus {
     color: var(--primary);
 }
 
+.nav-link.active {
+    display: none !important;
+}
+
 .nav-link i {
     font-size: 1rem;
 }
