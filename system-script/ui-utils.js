@@ -1,6 +1,12 @@
-
 /**
- * UI Utilities for custom Toast notifications and confirmation modals.
+ * @file ui-utils.js
+ * @description UI Utilities for the OJT Daily Journal System.
+ * Centrally manages non-intrusive Toast notifications, customizable blocking confirmation modals,
+ * utility functions for XSS prevention (HTML escaping), mobile hamburger navigation controls,
+ * and secure automated email drafts for missing daily journal submissions.
+ * 
+ * Part of the shared system utilities, consumed by both student and administrative modules.
+ * Fits into the global client-side infrastructure to provide premium design interactions.
  */
 
 /**
@@ -145,3 +151,118 @@ export function setupHamburgerMenu() {
         });
     }
 }
+
+/**
+ * Generates and triggers a native mailto email draft addressed to the student
+ * containing detailed information about their missing OJT journal dates.
+ * Utilizes safe URL encoding to pre-fill recipient, subject, and professional message body.
+ *
+ * @param {Object} student - The student information object.
+ * @param {string} student.email - The unique email address of the student.
+ * @param {string} student.firstName - The first name of the student.
+ * @param {string} student.lastName - The last name of the student.
+ * @param {Array<string>} [student.missingDates] - Array of YYYY-MM-DD strings representing missing journal dates.
+ * @returns {void} - Opens the default local mail client.
+ */
+export function sendReminderEmail(student) {
+    if (!student || !student.email) {
+        showToast("Error: Student email not found.", "error");
+        return;
+    }
+
+    const name = `${student.firstName} ${student.lastName}`;
+    const missing = student.missingDates || [];
+    const formattedDates = missing.length > 0
+        ? missing.map(d => `• ${d}`).join('\n')
+        : 'multiple daily journals';
+
+    const subject = encodeURIComponent("OJT Daily Journal Submission Reminder");
+    
+    // Construct a friendly, professional email body in English
+    let body = `Hi ${student.firstName},\n\n`;
+    body += `This is a reminder from your OJT Coordinator regarding your OJT Daily Journal submissions.\n\n`;
+    if (missing.length > 0) {
+        body += `We noticed that you have not submitted journals for the following scheduled work day(s):\n`;
+        body += `${formattedDates}\n\n`;
+    } else {
+        body += `We noticed that you have some missing daily journals in your OJT schedule.\n\n`;
+    }
+    body += `Please log in to the OJT Daily Journal System and submit them as soon as possible to keep your progress updated and ensure compliance.\n\n`;
+    body += `Link: ${window.location.origin}\n\n`;
+    body += `Best regards,\n`;
+    body += `OJT Coordinator`;
+    
+    const encodedBody = encodeURIComponent(body);
+    // Programmatic anchor click is the reliable cross-browser way to trigger a mailto.
+    // window.location.href silently fails for mailto: on many browsers.
+    const singleLink = document.createElement('a');
+    singleLink.href = mailtoUrl;
+    singleLink.style.display = 'none';
+    document.body.appendChild(singleLink);
+    singleLink.click();
+    document.body.removeChild(singleLink);
+
+    showToast(`Drafted email reminder for ${student.firstName}!`, "success");
+}
+
+/**
+ * Generates and triggers a native mailto email addressed to multiple students as BCC recipients.
+ * This maintains privacy between recipients (each student cannot see other emails).
+ * Composes a generic but professional body instructing all recipients to submit missing journals.
+ *
+ * @param {Array<Object>} students - Array of student objects who have missing journal entries.
+ * @param {string} students[].email - The unique email address of each student to BCC.
+ * @param {number} students[].totalMissing - Total count of missing journal entries per student.
+ * @returns {void} - Opens the default local mail client with pre-filled BCC, subject, and body.
+ */
+export function sendBulkReminderEmail(students) {
+    if (!students || students.length === 0) {
+        showToast("No students to send reminders to.", "info");
+        return;
+    }
+
+    // Collect all valid student emails for BCC — filter out any empty/undefined values
+    const bccEmails = students
+        .map(s => s.email)
+        .filter(Boolean)
+        .join(',');
+
+    if (!bccEmails) {
+        showToast("No valid email addresses found.", "error");
+        return;
+    }
+
+    const subject = encodeURIComponent("OJT Daily Journal Submission Reminder");
+
+    // Compose a generic professional reminder body suitable for all recipients
+    let body = `Dear OJT Student,\n\n`;
+    body += `This is a reminder from your OJT Coordinator regarding your OJT Daily Journal submissions.\n\n`;
+    body += `Our records indicate that you have one or more missing journal entries. `;
+    body += `Please log in to the OJT Daily Journal System and submit them as soon as possible `;
+    body += `to keep your progress updated and ensure compliance with your OJT requirements.\n\n`;
+    body += `Link: ${window.location.origin}\n\n`;
+    body += `Best regards,\n`;
+    body += `OJT Coordinator`;
+
+    const encodedBody = encodeURIComponent(body);
+
+    // NOTE: Using BCC so recipients cannot see each other's addresses.
+    // Build the mailto URL with BCC — no "to" field so it opens a blank compose window.
+    const mailtoUrl = `mailto:?bcc=${encodeURIComponent(bccEmails)}&subject=${subject}&body=${encodedBody}`;
+
+    // Show the toast first so it's visible while the mail client is launching
+    showToast(
+        `Opening email client for ${students.length} student${students.length !== 1 ? 's' : ''}...`,
+        "info"
+    );
+
+    // Programmatic anchor click is the reliable cross-browser way to trigger a mailto.
+    // window.location.href silently fails for long mailto URLs (many BCC recipients).
+    const bulkLink = document.createElement('a');
+    bulkLink.href = mailtoUrl;
+    bulkLink.style.display = 'none';
+    document.body.appendChild(bulkLink);
+    bulkLink.click();
+    document.body.removeChild(bulkLink);
+}
+

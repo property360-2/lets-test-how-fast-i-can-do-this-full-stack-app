@@ -1,3 +1,11 @@
+/*
+ * File: styles.css
+ * Purpose: Global system stylesheet defining custom fonts, variables, CSS classes,
+ *          glassmorphism cards, buttons, badges, toast notifications, custom prompts,
+ *          and mobile responsiveness across the entire application interface.
+ * Fit: Ingested by both student and administrative HTML pages to guarantee identical styling and aesthetics.
+ */
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap');
 
 :root {
@@ -153,7 +161,7 @@ select:focus {
 }
 
 .nav-link.active {
-    display: none !important;
+    font-weight: 600;
 }
 
 .nav-link i {

@@ -1,4 +1,16 @@
 
+<!--
+  HTML File: admin-archives.html
+  Purpose: Administrative panel for managing historically archived/inactive student accounts.
+  Contains:
+    - Main archived records table detailing student name, email, ID, section, company, status, and restore actions.
+    - Synchronized navigation bar layout with all administrator views.
+    - Modal confirmation dialogue integration before restoring database record statuses.
+  Integration:
+    - Guarded with auth.js session validator for 'admin' user profile roles.
+    - Integrates with admin-utils.js to query historically archived student profiles and restore active accounts.
+    - Employs ui-utils.js for Toast alerts, custom confirmation windows, and hamburger menus.
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -39,15 +51,19 @@
     <nav class="nav">
         <a href="../index.html" class="logo">
             <img src="../assets/richwell-colleges-logo.webp" alt="Logo" style="height: 40px;">
-            <span style="font-size: 0.7rem; color: var(--secondary); margin-left: 0.5rem; background: rgba(236, 72, 153, 0.1); padding: 0.2rem 0.5rem; border-radius: 4px;">ADMIN</span>
+            <span class="hide-mobile" style="font-size: 0.7rem; color: var(--secondary); margin-left: 0.5rem; background: rgba(236, 72, 153, 0.1); padding: 0.2rem 0.5rem; border-radius: 4px;">ADMIN</span>
         </a>
         <button id="menu-toggle" class="menu-toggle"><i class="fas fa-bars"></i></button>
         <div class="nav-links">
-            <a href="admin-dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
-            <a href="admin-students.html" class="nav-link"><i class="fas fa-users"></i> Students</a>
+            <a id="nav-overview" href="admin-dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
+            <a id="nav-students" href="admin-students.html" class="nav-link"><i class="fas fa-users"></i> Students</a>
+            <a id="nav-journals" href="admin-journals.html" class="nav-link"><i class="fas fa-book"></i> Journals</a>
+            <a id="nav-archives" href="admin-archives.html" class="nav-link active"><i class="fas fa-archive"></i> Archives</a>
         </div>
         <div>
-            <button id="logout-btn" class="btn btn-outline" style="padding: 0.5rem 1rem;">Logout</button>
+            <button id="logout-btn" class="btn btn-outline" style="padding: 0.5rem 1rem;">
+                <i class="fas fa-sign-out-alt"></i> <span class="hide-mobile">Logout</span>
+            </button>
         </div>
     </nav>
 
@@ -103,6 +119,14 @@
 
         let allStudents = [];
 
+        /**
+         * Asynchronously downloads archives representing inactive/archived student user profiles from Firestore.
+         * Renders the corresponding visual state or error states upon data load operations.
+         *
+         * @async
+         * @function loadArchives
+         * @returns {Promise<void>} Resolves when the list of archived students is fetched and rendered.
+         */
         async function loadArchives() {
             try {
                 allStudents = await getAllStudents(false); // Load inactive students
@@ -113,6 +137,14 @@
             }
         }
 
+        /**
+         * Dynamic HTML constructor that populates the archived student accounts table list.
+         * Supports direct restoration trigger actions, or displays appropriate empty state markers.
+         *
+         * @function renderStudents
+         * @param {Array<Object>} students - Array containing inactive student profile records.
+         * @returns {void}
+         */
         function renderStudents(students) {
             const body = document.getElementById('student-list-body');
             if (students.length === 0) {
@@ -141,6 +173,15 @@
             `).join('');
         }
 
+        /**
+         * Prompts the administrator via interactive dialogue to confirm student restoration.
+         * Updates user profile flag to true in Firestore and triggers view refresh upon completion.
+         *
+         * @async
+         * @function restoreStudent
+         * @param {string} uid - Target student's unique database account key.
+         * @returns {Promise<void>} Resolves when the student restoration procedure completes.
+         */
         window.restoreStudent = async (uid) => {
             const confirmed = await showConfirm('Restore Student', 'Are you sure you want to restore this student to active status?', 'info');
             if (!confirmed) return;

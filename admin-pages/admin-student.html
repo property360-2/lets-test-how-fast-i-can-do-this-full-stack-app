@@ -1,4 +1,15 @@
 
+<!--
+  HTML File: admin-student.html
+  Purpose: Administrative view for tracking and reviewing an individual student's OJT journal submissions calendar.
+  Contains:
+    - Student profile information display card (Name, ID, Section, Company, and compliance status badge).
+    - Graphical interactive monthly calendar displaying submitted (Reviewed/Pending) and Missing days.
+    - Synchronized navigation bar layout with all administrator views.
+  Integration:
+    - Guarded with auth.js session validator for 'admin' user profile roles.
+    - Integrates with journal-utils.js to fetch student progress data, journals list, and calculated missing submission dates.
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -170,8 +181,10 @@
         </a>
         <button id="menu-toggle" class="menu-toggle"><i class="fas fa-bars"></i></button>
         <div class="nav-links">
-            <a href="admin-dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
-            <a href="admin-students.html" class="nav-link"><i class="fas fa-users"></i> Students</a>
+            <a id="nav-overview" href="admin-dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
+            <a id="nav-students" href="admin-students.html" class="nav-link active"><i class="fas fa-users"></i> Students</a>
+            <a id="nav-journals" href="admin-journals.html" class="nav-link"><i class="fas fa-book"></i> Journals</a>
+            <a id="nav-archives" href="admin-archives.html" class="nav-link"><i class="fas fa-archive"></i> Archives</a>
         </div>
         <div>
             <button id="logout-btn" class="btn btn-outline" style="padding: 0.5rem 1rem;">
@@ -258,6 +271,14 @@
         let missingDates = [];
         let viewDate = new Date();
 
+        /**
+         * Initializes the student overview workspace by reading URL query parameters or local session cache,
+         * fetching student progress records from Firestore via journal-utils.js, and triggering calendar and compliance badge updates.
+         *
+         * @async
+         * @function init
+         * @returns {Promise<void>} Resolves when student information, journals, and missing schedules are loaded and rendered.
+         */
         async function init() {
             if (!studentUid) { window.location.href = 'admin-students.html'; return; }
 
@@ -279,6 +300,14 @@
             }
         }
 
+        /**
+         * Renders the interactive calendar layout, dynamically coloring days based on submission status:
+         * Green (Reviewed), Yellow (Pending), Red (Missing), or Grey (Other Month).
+         * Utilizes high-performance map lookup for O(1) journal existence checking (Rule 6).
+         *
+         * @function renderCalendar
+         * @returns {void} Direct structural DOM manipulation of calendar grid.
+         */
         function renderCalendar() {
             const daysContainer = document.getElementById('calendar-days');
             const monthYearLabel = document.getElementById('calendar-month-year');
@@ -350,10 +379,27 @@
             renderCalendar();
         };
 
+        /**
+         * Redirects the admin client to review details of a selected journal entry submission.
+         *
+         * @function selectJournal
+         * @param {string} id - The Firestore ID of the selected journal.
+         * @param {string} date - Formatted date string for the selected day.
+         * @returns {void} Redirects window location.
+         */
         window.selectJournal = (id, date) => {
-            window.location.href = `admin-journal-review.html?uid=${studentUid}&id=${id}&date=${date}`;
+            window.location.href = `admin-journal-review.html?uid=${studentUid}&id=${id}&date=${date}&from=calendar`;
         };
 
+        /**
+         * Evaluates a student's total submitted and missing schedule metrics to update the compliance status badge.
+         *
+         * @function updateCompliance
+         * @param {Object} progress - Calculations output representing student OJT progress.
+         * @param {number} progress.totalSubmitted - Total verified submission records.
+         * @param {number} progress.totalMissing - Number of identified missing duty shifts.
+         * @returns {void} Updates UI badge class and text attributes.
+         */
         function updateCompliance(progress) {
             const total = progress.totalSubmitted;
             const missing = progress.totalMissing;

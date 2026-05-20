@@ -1,0 +1,191 @@
+# 🎓 Case Study: OJT Daily Journal System
+
+## 📌 Executive Summary
+On-the-Job Training (OJT) is a vital bridge between academic instruction and professional practice. However, tracking student participation, daily progress, and policy compliance manually is a logistical nightmare for academic institutions.
+
+The **OJT Daily Journal System** is a lightweight, high-performance, and beautifully designed web application built to digitize, automate, and streamline daily journaling and progress tracking for OJT interns. By combining a modern glassmorphic frontend with a serverless backend powered by **Firebase**, the system eliminates paper logs, reduces administrative friction, and provides immediate visibility into student progress.
+
+---
+
+## 🔍 The Problem: The Pitfalls of Manual OJT Tracking
+Before this system was developed, OJT coordinators and students relied on physical logbooks, printouts, or scattered email threads to log and review daily activities. This manual process presented severe issues:
+
+1. **Massive Administrative Overhead**: OJT coordinators had to manually collect, read, and grade hundreds of pages of daily journals per student every single week.
+2. **Lack of Real-Time Compliance Monitoring**: Checking if an intern was actually working their schedule or missing journals was impossible to do proactively. Problems were only discovered at the end of the term, delaying graduation.
+3. **Double Submission & Data Inconsistencies**: Students frequently backdated logs, submitted duplicate journals, or logged entries for days they were not scheduled to work (e.g., weekends or holidays).
+4. **Poor Feedback Loops**: Because logbooks were collected physically at intervals, students rarely received timely guidance or remarks from their coordinators to improve their training performance.
+5. **Loss of Physical Logs**: Physical logbooks are easily damaged, misplaced, or forged, compromising the integrity of the educational evaluation.
+
+---
+
+## 💡 The Solution: OJT Daily Journal System
+The OJT Daily Journal System resolves these issues through a central web-based workspace with specialized student and admin dashboards.
+
+```mermaid
+graph TD
+    subgraph Client [Client-Side Presentation]
+        StudentUI[Student Dashboard]
+        AdminUI[Admin Dashboard]
+        LoginUI[Login Page]
+    end
+
+    subgraph BusinessLogic [Modular JS Services]
+        AuthJS[auth.js]
+        JournalJS[journal-utils.js]
+        AdminJS[admin-utils.js]
+        UIJS[ui-utils.js]
+    end
+
+    subgraph BaaS [Firebase Backend-as-a-Service]
+        FirebaseAuth[Firebase Auth]
+        Firestore[(Cloud Firestore)]
+    end
+
+    StudentUI --> AuthJS
+    StudentUI --> JournalJS
+    StudentUI --> UIJS
+    
+    AdminUI --> AuthJS
+    AdminUI --> AdminJS
+    AdminUI --> JournalJS
+    AdminUI --> UIJS
+
+    LoginUI --> AuthJS
+
+    AuthJS --> FirebaseAuth
+    JournalJS --> Firestore
+    AdminJS --> Firestore
+```
+
+### 🧑‍🎓 For Students:
+- **Interactive Daily Logging**: Easy interface to write, draft, and submit logs.
+- **Smart Validation**: The system prevents submitting journals for non-workdays or duplicate dates.
+- **Dynamic Weekly Tracking**: Instantly shows students which week they are in (e.g., Week 6) and lists missing journal dates based on their custom work schedule.
+- **Immutable Post-Review Locks**: Once an administrator reviews a journal, it becomes read-only to guarantee record integrity.
+
+### 🧑‍💼 For Administrators (OJT Coordinators):
+- **Live Status Feed**: An elegant, glassmorphic central dashboard showing active students, total submitted journals, and pending reviews.
+- **Automated Compliance Engine**: Automatically classifies student weekly performance:
+  - **✅ Passed**: 5 to 7 journals submitted in a week.
+  - **⚠️ Incomplete**: 1 to 4 journals submitted in a week.
+  - **❌ No Submission**: 0 journals submitted in a week.
+- **Interactive Reviews & Remarks**: Coordinators can comment on entries directly, helping students adjust their focus immediately.
+- **Intern Directory**: Quickly search, filter, add, or archive student accounts.
+
+---
+
+## 🛠️ The Tech Stack
+To guarantee rapid loading speeds, ease of deployment, and high reliability, the system leverages a modern, clean, serverless architecture:
+
+* **Frontend UI (No Framework Overhead)**:
+  * **HTML5**: Structured semantic pages ensuring search accessibility and standard compliance.
+  * **Vanilla CSS3**: Tailored premium design featuring visual glassmorphism, responsive grids, sleek gradients, and subtle interactive transitions.
+  * **FontAwesome 6**: Rich iconography for clear, professional dashboards.
+* **Core Application Logic**:
+  * **JavaScript ES6+ Modules**: Highly modularized code splitting (`auth.js`, `journal-utils.js`, `admin-utils.js`, `ui-utils.js`) ensuring single-responsibility architecture and maintaining code scale.
+* **Serverless Backend (Firebase BaaS)**:
+  * **Firebase Authentication**: Implements role-based access secure credentials.
+  * **Cloud Firestore**: Real-time Document Database that hosts user profiles and daily logs.
+* **Hosting**:
+  * Optimized for cost-effective deployment on static servers such as **GitHub Pages**, removing any server maintenance or database configuration charges.
+
+---
+
+## 🗄️ Database Design Highlights
+The system utilizes a flat, high-performance Firestore layout consisting of two main collections linked by a logical relationship:
+
+### 1. `users` Collection
+Stores metadata for student and coordinator profiles.
+* **Document ID**: Firebase Auth `uid`
+```json
+{
+  "role": "student", // "student" or "admin"
+  "studentId": "2021-04567",
+  "firstName": "Juan",
+  "lastName": "Dela Cruz",
+  "section": "BSIT-4A",
+  "email": "juan@student.com",
+  "company": "ABC Corp",
+  "position": "IT Intern",
+  "ojtStart": "2026-01-05", // Sets calculations base
+  "workSchedule": [1, 2, 3, 4, 5], // Monday (1) to Friday (5)
+  "isActive": true,
+  "createdAt": "Timestamp"
+}
+```
+
+### 2. `journals` Collection
+Stores the daily records submitted by interns.
+* **Document ID**: `${userId}_${date}` (e.g., `ltfU9DKVUaF5PuBQm0Mx_2026-02-13`)
+  > [!NOTE]
+  > Using a composite ID of `${userId}_${date}` naturally enforces database-level uniqueness. It is structurally impossible for a student to create more than one journal for the same day.
+
+```json
+{
+  "userId": "ltfU9DKVUaF5PuBQm0Mx",
+  "date": "2026-02-13",
+  "week": 6, // Calculated dynamically
+  "content": "Worked on backend validation checks and integrated Cloud Firestore.",
+  "submitted": true,
+  "reviewed": false,
+  "remarks": "",
+  "timestamp": "Timestamp", // Server-side creation time
+  "updatedAt": "Timestamp"
+}
+```
+
+---
+
+## ⚙️ Advanced Technical Highlights
+
+### 📅 1. Dynamic Week Computation
+Instead of hardcoding academic weeks or making students guess, the platform dynamically calculates the OJT week number on-the-fly using the student's unique `ojtStart` date:
+```javascript
+export function calculateWeekNumber(dateStr, ojtStartDate) {
+    if (!ojtStartDate) return 1;
+    const start = new Date(ojtStartDate);
+    const current = new Date(dateStr);
+    const diffTime = current - start;
+    if (diffTime < 0) return 1;
+
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return Math.floor(diffDays / 7) + 1; // 7-day increments
+}
+```
+
+### 🛡️ 2. Dual-Layer Workday Validation
+To ensure academic integrity, the system implements a powerful scheduled check before permitting submission:
+1. **Global Overrides**: Checks the `workdays` collection for date-specific overrides (e.g., national holidays, weather suspensions).
+2. **Personal Schedule**: Checks the student's individual `workSchedule` array, preventing students from logging journals on unscheduled days (e.g., weekends) without admin approval.
+
+### 📊 3. Automated Gap Identification (Missing Logs)
+Coordinators and students don't need to manually check calendars. The `getStudentProgress` engine loops from `ojtStart` to the current local date, compares it with the student's work schedule, and cross-references active Firestore documents to return exact calendar dates of missing journals in milliseconds:
+```javascript
+let current = new Date(startDate);
+while (current <= today) {
+    const dateStr = current.toISOString().split('T')[0];
+    const dayOfWeek = current.getDay();
+
+    if (schedule.includes(dayOfWeek) && !submittedDates.has(dateStr)) {
+        missingDates.push(dateStr); // Direct list of exact missing days!
+    }
+    current.setDate(current.getDate() + 1);
+}
+```
+
+---
+
+## 📈 Educational & Business Value
+
+| Metric / Aspect | Before (Manual Process) | After (OJT Daily Journal System) |
+| :--- | :--- | :--- |
+| **Review Speed** | 10 - 15 minutes per student logbook | **< 30 seconds** (instant filter, review, comment) |
+| **Data Verifiability** | High chance of forge/loss | **100% Immutable** logs locked post-review |
+| **Status Transparency** | Discovered only at midterms/finals | **Real-time visibility** into missing journals |
+| **Storage & Cost** | Heavy paper printouts, file cabinets | **$0.00** serverless architecture |
+| **Policy Enforcement** | Late submissions accepted silently | **Hard locks** prevent out-of-schedule logs |
+
+---
+
+## 🎓 Summary of Impact
+The **OJT Daily Journal System** successfully bridges the gap between OJT student interns and university administrators. By removing the pain of paperwork and providing automated compliance feedback, it fosters a professional corporate habit of daily reporting for students, while allowing OJT coordinators to focus on actual mentorship rather than spreadsheet manual tracking.

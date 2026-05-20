@@ -1,4 +1,15 @@
 
+<!--
+  HTML File: admin-journals.html
+  Purpose: Administrative journals control panel for global tracking and reviewing of student journal submissions.
+  Contains:
+    - Main structured records table detailing date, student name, academic week, status, and direct context review button.
+    - Global filter widgets for real-time name searching and review-status sorting (All, Pending, Reviewed).
+    - Fully responsive synchronized navigation menu bar for fluid administrative routing.
+  Integration:
+    - Guarded with auth.js session validator for 'admin' authorization profiles.
+    - Interacts with admin-utils.js to download global system student maps and filter journal entries.
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -53,14 +64,19 @@
     <nav class="nav">
         <a href="../index.html" class="logo">
             <img src="../assets/richwell-colleges-logo.webp" alt="Logo" style="height: 40px;">
+            <span class="hide-mobile" style="font-size: 0.7rem; color: var(--secondary); margin-left: 0.5rem; background: rgba(236, 72, 153, 0.1); padding: 0.2rem 0.5rem; border-radius: 4px;">ADMIN</span>
         </a>
+        <button id="menu-toggle" class="menu-toggle"><i class="fas fa-bars"></i></button>
         <div class="nav-links">
-            <a href="admin-dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
-            <a href="admin-students.html" class="nav-link"><i class="fas fa-users"></i> Students</a>
-            <!-- Journals hidden as per request -->
+            <a id="nav-overview" href="admin-dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
+            <a id="nav-students" href="admin-students.html" class="nav-link"><i class="fas fa-users"></i> Students</a>
+            <a id="nav-journals" href="admin-journals.html" class="nav-link active"><i class="fas fa-book"></i> Journals</a>
+            <a id="nav-archives" href="admin-archives.html" class="nav-link"><i class="fas fa-archive"></i> Archives</a>
         </div>
         <div>
-            <button id="logout-btn" class="btn btn-outline" style="padding: 0.5rem 1rem;">Logout</button>
+            <button id="logout-btn" class="btn btn-outline" style="padding: 0.5rem 1rem;">
+                <i class="fas fa-sign-out-alt"></i> <span class="hide-mobile">Logout</span>
+            </button>
         </div>
     </nav>
 
@@ -115,14 +131,24 @@
     <script type="module">
         import { logoutUser, guardPage } from '../system-script/auth.js';
         import { getAllJournals, getAllStudents } from '../system-script/admin-utils.js';
-        import { showToast } from '../system-script/ui-utils.js';
+        import { showToast, setupHamburgerMenu } from '../system-script/ui-utils.js';
 
         guardPage('admin');
+        setupHamburgerMenu();
         document.getElementById('logout-btn').addEventListener('click', logoutUser);
 
         let journals = [];
         let studentsMap = {};
 
+        /**
+         * Initializes the global administrative journals tracker page.
+         * Fetches all registered students to map Firestore UIDs to human-readable names,
+         * configures mobile interactive navigation UI, and triggers standard journals database query load.
+         *
+         * @async
+         * @function init
+         * @returns {Promise<void>} Resolves when the full list of students has been cached and journals are loaded.
+         */
         async function init() {
             try {
                 // Fetch students first to map names
@@ -137,6 +163,14 @@
             }
         }
 
+        /**
+         * Asynchronously queries the database for student journal entries based on selected review status.
+         * Renders loading skeletons/status markup and delegates table rendering upon successful data fetching.
+         *
+         * @async
+         * @function loadJournals
+         * @returns {Promise<void>} Resolves when the journals matching selected filters are populated.
+         */
         async function loadJournals() {
             const status = document.getElementById('status-filter').value;
             try {
@@ -148,6 +182,19 @@
             }
         }
 
+        /**
+         * Filters the journal list client-side based on the current search input value,
+         * maps individual student names, and renders clean tabular display cards in the table.
+         * If no matching journals are found, presents an elegant fallback layout.
+         *
+         * @function renderJournals
+         * @param {Array<Object>} list - The array of raw student journal entries.
+         * @param {string} list[].userId - Target student UID for mapping.
+         * @param {string} list[].date - Submission date formatted string.
+         * @param {number} list[].week - Academic program week number of submission.
+         * @param {boolean} list[].reviewed - Validation state of student entry review.
+         * @returns {void}
+         */
         function renderJournals(list) {
             const body = document.getElementById('journal-list-body');
             const searchTerm = document.getElementById('name-search').value.toLowerCase();
@@ -175,7 +222,7 @@
                         </span>
                     </td>
                     <td>
-                        <button onclick="reviewJournal('${j.userId}', '${j.date}')" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">
+                        <button onclick="reviewJournal('${j.userId}', '${j.id}', '${j.date}')" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">
                             Review
                         </button>
                     </td>
@@ -183,9 +230,19 @@
             `).join('');
         }
 
-        window.reviewJournal = (uid, date) => {
+        /**
+         * Mounts chosen student target state in session storage and redirects the client,
+         * allowing context-aware review of individual log entries.
+         *
+         * @function reviewJournal
+         * @param {string} uid - Target student's unique user account ID.
+         * @param {string} id - The specific document ID of the journal entry in Firestore.
+         * @param {string} date - Particular entry log date identifier.
+         * @returns {void} Redirects window location.
+         */
+        window.reviewJournal = (uid, id, date) => {
             sessionStorage.setItem('selectedStudentUid', uid);
-            window.location.href = `admin-student.html?date=${date}`;
+            window.location.href = `admin-journal-review.html?uid=${uid}&id=${id}&date=${date}&from=journals`;
         };
 
         document.getElementById('status-filter').addEventListener('change', loadJournals);
